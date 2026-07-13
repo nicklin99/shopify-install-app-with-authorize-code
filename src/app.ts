@@ -16,16 +16,24 @@ dotenv.config();
 
 const app = express();
 
+// 信任反向代理（EdgeOne / ngrok），让 req.protocol 正确识别 HTTPS
+app.set("trust proxy", true);
+
 // -------------------------------------------------------------------
-// 动态 hostName 中间件
+// 动态 hostName 和 hostScheme 中间件
 // -------------------------------------------------------------------
-// 用当前请求的 Host 头覆盖 shopify.config.hostName，
-// 这样部署到 EdgeOne 后无需硬编码 SASS_APP_URL，自动适配当前域名。
+// 从当前请求中获取协议和域名，覆盖 shopify.config 的对应字段，
+// 这样部署到 EdgeOne 后无需硬编码 SASS_APP_URL，自动适配当前域名和协议。
 app.use((_req, _res, next) => {
   const shopify = getShopify();
   const host = _req.headers.host;
   if (host) {
     shopify.config.hostName = host;
+  }
+  // x-forwarded-proto 由反向代理（EdgeOne / ngrok）设置
+  const proto = _req.headers["x-forwarded-proto"] as string | undefined;
+  if (proto === "https" || proto === "http") {
+    shopify.config.hostScheme = proto;
   }
   next();
 });
