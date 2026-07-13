@@ -39,17 +39,9 @@ router.get("/auth", async (req: Request, res: Response) => {
     });
     // 响应已被 SDK 自动处理（302 重定向），此处不再操作 res
   } catch (err) {
-    const shopify = getShopify();
-    const usedRedirectUri = `${shopify.config.hostScheme}://${shopify.config.hostName}/auth/callback`;
     console.error("[auth] begin 失败: %s", err instanceof Error ? err.message : err);
     if (!res.headersSent) {
-      return res.status(500).json({
-        error: "授权初始化失败",
-        detail: err instanceof Error ? err.message : String(err),
-        redirect_uri: usedRedirectUri,
-        configHost: shopify.config.hostName,
-        configScheme: shopify.config.hostScheme,
-      });
+      return res.status(500).send("授权初始化失败");
     }
   }
 });
@@ -64,6 +56,14 @@ router.get("/auth", async (req: Request, res: Response) => {
 //   5. 创建 session
 // -------------------------------------------------------------------
 router.get("/auth/callback", async (req: Request, res: Response) => {
+  const shop = req.query.shop as string | undefined;
+
+  // 用户取消安装 → 跳回首页重新尝试
+  if (req.query.error === "access_denied") {
+    console.log("[auth] 用户取消安装: shop=%s", shop);
+    return res.redirect(shop ? `/?shop=${shop}` : "/");
+  }
+
   try {
     const shopify = getShopify();
     const { session } = await shopify.auth.callback({
@@ -78,13 +78,8 @@ router.get("/auth/callback", async (req: Request, res: Response) => {
       `[auth] 安装成功: shop=${session.shop}, token=${session.accessToken?.slice(0, 16)}...`
     );
 
-    // 重定向到应用首页，带上 shop 参数
-    const host = req.query.host as string | undefined;
-    const redirectTo = host
-      ? `/?shop=${session.shop}&host=${encodeURIComponent(host)}`
-      : `/?shop=${session.shop}`;
-
-    return res.redirect(redirectTo);
+    // 重定向到应用首页
+    return res.redirect(`/?shop=${session.shop}`);
   } catch (err) {
     console.error("[auth] callback 失败:", err);
     return res.status(500).send("授权处理失败");
