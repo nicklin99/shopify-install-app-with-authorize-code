@@ -17,13 +17,17 @@ export function getShopify(): Shopify {
     const { SHOPIFY_API_KEY, SHOPIFY_API_SECRET, SHOPIFY_SCOPES, SASS_APP_URL } =
       process.env;
 
-    if (!SHOPIFY_API_KEY || !SHOPIFY_API_SECRET || !SASS_APP_URL) {
+    if (!SHOPIFY_API_KEY || !SHOPIFY_API_SECRET) {
       throw new Error(
-        "缺少必需的环境变量: SHOPIFY_API_KEY, SHOPIFY_API_SECRET, SASS_APP_URL"
+        "缺少必需的环境变量: SHOPIFY_API_KEY, SHOPIFY_API_SECRET"
       );
     }
 
-    const hostName = SASS_APP_URL.replace(/^https?:\/\//, "").replace(/\/$/, "");
+    // SASS_APP_URL 可选：有则作为静态 hostName 兜底，
+    // 否则由 src/app.ts 中的中间件动态从请求 Host 头设置
+    const hostName = SASS_APP_URL
+      ? SASS_APP_URL.replace(/^https?:\/\//, "").replace(/\/$/, "")
+      : "localhost:3000";
 
     shopify = shopifyApi({
       apiKey: SHOPIFY_API_KEY,

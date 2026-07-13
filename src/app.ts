@@ -24,6 +24,20 @@ const app = express();
 getShopify().config.sessionStorage = memorySessionStorage;
 
 // -------------------------------------------------------------------
+// 动态 hostName 中间件
+// -------------------------------------------------------------------
+// 用当前请求的 Host 头覆盖 shopify.config.hostName，
+// 这样部署到 EdgeOne 后无需硬编码 SASS_APP_URL，自动适配当前域名。
+app.use((_req, _res, next) => {
+  const shopify = getShopify();
+  const host = _req.headers.host;
+  if (host) {
+    shopify.config.hostName = host;
+  }
+  next();
+});
+
+// -------------------------------------------------------------------
 // 路由
 // -------------------------------------------------------------------
 app.use(authRouter);
