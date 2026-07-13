@@ -48,6 +48,7 @@ app.get("/debug", (req: Request, res: Response) => {
   const shopify = getShopify();
   // print req.headers kv
   console.log(req.headers);
+  console.log(req.url)
   res.json({
     host: req.headers.host,
     protocol: req.protocol,
