@@ -26,10 +26,14 @@ app.set("trust proxy", true);
 // 这样部署到 EdgeOne 后无需硬编码 SASS_APP_URL，自动适配当前域名和协议。
 app.use((_req, _res, next) => {
   const shopify = getShopify();
-  const host = _req.headers.host;
+
+  // EdgeOne Pages 把原始域名放在 eo-pages-host 头中，
+  // 回退到常规 Host 头（本地开发 / Docker 场景）
+  const host = (_req.headers["eo-pages-host"] as string | undefined) ?? _req.headers.host;
   if (host) {
     shopify.config.hostName = host;
   }
+
   // x-forwarded-proto 由反向代理（EdgeOne / ngrok）设置
   const proto = _req.headers["x-forwarded-proto"] as string | undefined;
   if (proto === "https" || proto === "http") {
@@ -43,19 +47,6 @@ app.use((_req, _res, next) => {
 // -------------------------------------------------------------------
 app.use(authRouter);
 
-// 调试：查看收到的请求头
-app.get("/debug", (req: Request, res: Response) => {
-  const shopify = getShopify();
-  // print req.headers kv
-  console.log(req.headers);
-  console.log(req.url)
-  res.json({
-    host: req.headers.host,
-    protocol: req.protocol,
-    configHostName: shopify.config.hostName,
-    configHostScheme: shopify.config.hostScheme,
-  });
-});
 
 // 首页：显示安装状态
 app.get("/", async (req: Request, res: Response) => {
