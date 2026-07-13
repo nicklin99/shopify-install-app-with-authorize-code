@@ -1,18 +1,71 @@
 /**
- * Shopify OAuth 授权码安装 Demo — 本地开发入口
+ * Express App 创建
  *
- * 启动 Express 服务（Docker / 本地开发使用）。
- * 部署到 EdgeOne Pages 时使用 node-functions/express/[[default]].js 作为入口。
+ * 独立导出 app 实例，供以下两种方式使用：
+ *   1. src/index.ts  — 本地开发 / Docker，调用 app.listen()
+ *   2. EdgeOne Pages — 入口文件导入后 export default app（平台管理 HTTP）
  */
+import express, { type Request, type Response } from "express";
+import dotenv from "dotenv";
 
-import app from "./app.js";
+import { getShopify } from "./shopify.js";
+import { memorySessionStorage } from "./session-store.js";
+import authRouter from "./routes/auth.js";
 
-const PORT = Number(process.env.PORT) || 3000;
+dotenv.config();
 
-app.listen(PORT, () => {
-  console.log(`🚀 Shopify App 启动: http://localhost:${PORT}`);
-  console.log(`   安装链接: http://localhost:${PORT}/auth?shop=你的店铺.myshopify.com`);
+const app = express();
+
+// -------------------------------------------------------------------
+// 将 SessionStorage 注册到 Shopify SDK
+// -------------------------------------------------------------------
+// 【EdgeOne 注意】memorySessionStorage 在无服务器环境中无法跨请求共享。
+// 生产部署到 EdgeOne Pages 时请替换为 KV 或数据库实现。
+getShopify().config.sessionStorage = memorySessionStorage;
+
+// -------------------------------------------------------------------
+// 路由
+// -------------------------------------------------------------------
+app.use(authRouter);
+
+// 首页：显示安装状态
+app.get("/", async (req: Request, res: Response) => {
+  const shop = req.query.shop as string | undefined;
+
+  if (!shop) {
+    return res.send(HTML_HOME);
+  }
+
+  const shopify = getShopify();
+  const sessionId = shopify.session.getOfflineId(shop);
+  const session = await memorySessionStorage.loadSession(sessionId);
+
+  if (session?.accessToken) {
+    return res.send(
+      HTML_INSTALLED.replace("{{shop}}", shop).replace(
+        "{{token_preview}}",
+        session.accessToken.slice(0, 16) + "..."
+      ).replace("{{scopes}}", shopify.config.scopes.toString())
+    );
+  }
+
+  return res.send(
+    HTML_NOT_INSTALLED.replace("{{shop}}", shop)
+  );
 });
+
+// 健康检查
+app.get("/health", (_req: Request, res: Response) => {
+  const shopify = getShopify();
+  res.json({
+    status: "ok",
+    api_key_configured: Boolean(shopify.config.apiKey),
+    api_secret_configured: Boolean(shopify.config.apiSecretKey),
+    scopes: shopify.config.scopes.toString(),
+  });
+});
+
+export default app;
 
 // -------------------------------------------------------------------
 // HTML 模板
