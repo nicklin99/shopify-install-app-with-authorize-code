@@ -8,7 +8,7 @@
  * 构建时需要先运行 `npm run build` 编译 src/ → dist/。
  */
 
-import app from "../../dist/app.js";
+import app from "../dist/app.js";
 
 // ⚠️ 不要调用 app.listen() — EdgeOne 平台管理 HTTP 服务
 export default app;
