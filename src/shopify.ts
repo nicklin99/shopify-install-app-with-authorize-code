@@ -5,7 +5,7 @@
  * 所有 OAuth / API 调用都通过此实例进行。
  */
 import "@shopify/shopify-api/adapters/node";
-import { shopifyApi, LATEST_API_VERSION, type Shopify } from "@shopify/shopify-api";
+import { shopifyApi, ApiVersion, type Shopify } from "@shopify/shopify-api";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -34,7 +34,7 @@ export function getShopify(): Shopify {
       apiSecretKey: SHOPIFY_API_SECRET,
       scopes: (SHOPIFY_SCOPES ?? "write_products,read_customers").split(","),
       hostName,
-      apiVersion: LATEST_API_VERSION,
+      apiVersion: ApiVersion.July26,
       isEmbeddedApp: false,
     });
   }

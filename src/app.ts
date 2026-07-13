@@ -17,13 +17,6 @@ dotenv.config();
 const app = express();
 
 // -------------------------------------------------------------------
-// 将 SessionStorage 注册到 Shopify SDK
-// -------------------------------------------------------------------
-// 【EdgeOne 注意】memorySessionStorage 在无服务器环境中无法跨请求共享。
-// 生产部署到 EdgeOne Pages 时请替换为 KV 或数据库实现。
-getShopify().config.sessionStorage = memorySessionStorage;
-
-// -------------------------------------------------------------------
 // 动态 hostName 中间件
 // -------------------------------------------------------------------
 // 用当前请求的 Host 头覆盖 shopify.config.hostName，
@@ -59,7 +52,7 @@ app.get("/", async (req: Request, res: Response) => {
       HTML_INSTALLED.replace("{{shop}}", shop).replace(
         "{{token_preview}}",
         session.accessToken.slice(0, 16) + "..."
-      ).replace("{{scopes}}", shopify.config.scopes.toString())
+      ).replace("{{scopes}}", shopify.config.scopes?.toString() ?? "")
     );
   }
 
@@ -75,7 +68,7 @@ app.get("/health", (_req: Request, res: Response) => {
     status: "ok",
     api_key_configured: Boolean(shopify.config.apiKey),
     api_secret_configured: Boolean(shopify.config.apiSecretKey),
-    scopes: shopify.config.scopes.toString(),
+    scopes: shopify.config.scopes?.toString() ?? "",
   });
 });
 

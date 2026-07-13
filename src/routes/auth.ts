@@ -9,6 +9,7 @@
 
 import { Router, type Request, type Response } from "express";
 import { getShopify } from "../shopify.js";
+import { memorySessionStorage } from "../session-store.js";
 
 const router = Router();
 
@@ -25,16 +26,20 @@ router.get("/auth", async (req: Request, res: Response) => {
 
   try {
     const shopify = getShopify();
-    const redirectUrl = await shopify.auth.begin({
+    // v11 的 auth.begin() 通过 adapter 自动设置响应头并 end() 响应
+    await shopify.auth.begin({
       shop,
       callbackPath: "/auth/callback",
       isOnline: false, // false = 离线令牌（永不过期）
+      rawRequest: req,
+      rawResponse: res,
     });
-
-    return res.redirect(redirectUrl);
+    // 响应已被 SDK 自动处理（302 重定向），此处不再操作 res
   } catch (err) {
     console.error("[auth] begin 失败:", err);
-    return res.status(500).send("授权初始化失败");
+    if (!res.headersSent) {
+      return res.status(500).send("授权初始化失败");
+    }
   }
 });
 
@@ -45,15 +50,18 @@ router.get("/auth", async (req: Request, res: Response) => {
 //   2. 验证 state (nonce)
 //   3. 验证 shop 域名
 //   4. 用 code 换取 access_token
-//   5. 创建 session 并通过 SessionStorage 持久化
+//   5. 创建 session
 // -------------------------------------------------------------------
 router.get("/auth/callback", async (req: Request, res: Response) => {
   try {
     const shopify = getShopify();
-    const session = await shopify.auth.callback({
+    const { session } = await shopify.auth.callback({
       rawRequest: req,
       rawResponse: res,
     });
+
+    // 持久化 session
+    await memorySessionStorage.storeSession(session);
 
     console.log(
       `[auth] 安装成功: shop=${session.shop}, token=${session.accessToken?.slice(0, 16)}...`

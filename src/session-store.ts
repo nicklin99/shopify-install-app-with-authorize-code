@@ -1,30 +1,38 @@
 /**
  * 内存 Session 存储（开发/演示用）
  *
- * 生产环境请替换为数据库实现（如 SQLite, PostgreSQL, Redis 等）。
+ * @shopify/shopify-api v11 移除了 SessionStorage 接口，
+ * Session 管理由开发者自行实现。此处提供兼容的 Map 存储。
  *
- * 需要实现 @shopify/shopify-api 的 SessionStorage 接口：
- *   - storeSession(session): 保存 session
- *   - loadSession(id):       读取 session
- *   - deleteSession(id):     删除 session
- *   - deleteSessions(ids):   批量删除
- *   - findSessionsByShop(shop): 按 shop 查找
+ * 生产环境请替换为数据库实现（如 SQLite, PostgreSQL, Redis 等）。
  */
 
-import type {
-  SessionInterface,
-  SessionStorage,
-} from "@shopify/shopify-api";
+import { Session } from "@shopify/shopify-api";
 
-const sessions = new Map<string, SessionInterface>();
+const sessions = new Map<string, Session>();
 
-export const memorySessionStorage: SessionStorage = {
-  async storeSession(session: SessionInterface): Promise<boolean> {
+// 类型：定义统一的 Session 存储接口
+type StoreSession = (session: Session) => Promise<boolean>;
+type LoadSession = (id: string) => Promise<Session | undefined>;
+type DeleteSession = (id: string) => Promise<boolean>;
+type DeleteSessions = (ids: string[]) => Promise<boolean>;
+type FindSessionsByShop = (shop: string) => Promise<Session[]>;
+
+export interface SessionStore {
+  storeSession: StoreSession;
+  loadSession: LoadSession;
+  deleteSession: DeleteSession;
+  deleteSessions: DeleteSessions;
+  findSessionsByShop: FindSessionsByShop;
+}
+
+export const memorySessionStorage: SessionStore = {
+  async storeSession(session: Session): Promise<boolean> {
     sessions.set(session.id, session);
     return true;
   },
 
-  async loadSession(id: string): Promise<SessionInterface | undefined> {
+  async loadSession(id: string): Promise<Session | undefined> {
     return sessions.get(id);
   },
 
@@ -37,7 +45,7 @@ export const memorySessionStorage: SessionStorage = {
     return true;
   },
 
-  async findSessionsByShop(shop: string): Promise<SessionInterface[]> {
+  async findSessionsByShop(shop: string): Promise<Session[]> {
     return Array.from(sessions.values()).filter((s) => s.shop === shop);
   },
 };
