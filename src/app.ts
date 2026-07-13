@@ -46,16 +46,10 @@ app.use(authRouter);
 // 调试：查看收到的请求头
 app.get("/debug", (req: Request, res: Response) => {
   const shopify = getShopify();
-  const hostname = new URL(req.url).hostname
+  // print req.headers kv
+  console.log(req.headers);
   res.json({
-    hostname,
     host: req.headers.host,
-    "x-forwarded-proto": req.headers["x-forwarded-proto"],
-    "x-forwarded-host": req.headers["x-forwarded-host"],
-    "x-original-host": req.headers["x-original-host"],
-    "x-real-host": req.headers["x-real-host"],
-    "x-forwarded-for": req.headers["x-forwarded-for"],
-    "cf-connecting-ip": req.headers["cf-connecting-ip"],
     protocol: req.protocol,
     configHostName: shopify.config.hostName,
     configHostScheme: shopify.config.hostScheme,
