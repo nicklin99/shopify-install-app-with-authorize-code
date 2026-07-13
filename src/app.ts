@@ -57,7 +57,7 @@ app.get("/", async (req: Request, res: Response) => {
   }
 
   return res.send(
-    HTML_NOT_INSTALLED.replace("{{shop}}", shop)
+    HTML_NOT_INSTALLED.replaceAll("{{shop}}", shop)
   );
 });
 
