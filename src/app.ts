@@ -43,6 +43,19 @@ app.use((_req, _res, next) => {
 // -------------------------------------------------------------------
 app.use(authRouter);
 
+// 调试：查看收到的请求头
+app.get("/debug", (req: Request, res: Response) => {
+  const shopify = getShopify();
+  res.json({
+    host: req.headers.host,
+    "x-forwarded-proto": req.headers["x-forwarded-proto"],
+    "x-forwarded-host": req.headers["x-forwarded-host"],
+    protocol: req.protocol,
+    configHostName: shopify.config.hostName,
+    configHostScheme: shopify.config.hostScheme,
+  });
+});
+
 // 首页：显示安装状态
 app.get("/", async (req: Request, res: Response) => {
   const shop = req.query.shop as string | undefined;

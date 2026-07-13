@@ -26,6 +26,9 @@ router.get("/auth", async (req: Request, res: Response) => {
 
   try {
     const shopify = getShopify();
+    const redirectUri = `${shopify.config.hostScheme}://${shopify.config.hostName}/auth/callback`;
+    console.log("[auth] begin: shop=%s redirect_uri=%s", shop, redirectUri);
+
     // v11 的 auth.begin() 通过 adapter 自动设置响应头并 end() 响应
     await shopify.auth.begin({
       shop,
@@ -36,9 +39,17 @@ router.get("/auth", async (req: Request, res: Response) => {
     });
     // 响应已被 SDK 自动处理（302 重定向），此处不再操作 res
   } catch (err) {
-    console.error("[auth] begin 失败:", err);
+    const shopify = getShopify();
+    const usedRedirectUri = `${shopify.config.hostScheme}://${shopify.config.hostName}/auth/callback`;
+    console.error("[auth] begin 失败: %s", err instanceof Error ? err.message : err);
     if (!res.headersSent) {
-      return res.status(500).send("授权初始化失败");
+      return res.status(500).json({
+        error: "授权初始化失败",
+        detail: err instanceof Error ? err.message : String(err),
+        redirect_uri: usedRedirectUri,
+        configHost: shopify.config.hostName,
+        configScheme: shopify.config.hostScheme,
+      });
     }
   }
 });
